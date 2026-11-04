@@ -100,7 +100,6 @@
     .bo-item-list { list-style: none; padding: 0; margin: 10px 0 0 0; max-height: 250px; overflow-y: auto; }
     .bo-item-list li { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: #fafbfc; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; gap: 8px; }
     
-    /* Icon comments */
     .comment-icon { cursor: pointer; margin-left: 4px; font-size: 0.9rem; }
 
     /* Stats Layout */
@@ -142,7 +141,7 @@
           <button class="btn btn-warning" id="btnUrgences" onclick="toggleUrgences()">⚠️ Urgences (J-2 / Retards)</button>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="btn btn-secondary" onclick="loadServerData(true)" title="Recharger les données et la configuration depuis le serveur">🔄 Recharger serveur</button>
+          <button class="btn btn-secondary" onclick="loadServerData(true)" title="Recharger les données depuis GitHub/Serveur">🔄 Recharger serveur</button>
           <button class="btn btn-primary" onclick="openAddModal()">➕ Nouveau contenu</button>
           <button class="btn btn-secondary" onclick="exportCSV()">📊 Export CSV</button>
           <button class="btn btn-secondary" onclick="exportJSON()">💾 Export JSON</button>
@@ -241,6 +240,31 @@
 
     <!-- TAB 4: BACK-OFFICE -->
     <div id="tab-backoffice" class="tab-content">
+      <!-- CONFIGURATION GITHUB API -->
+      <div class="card" style="border-left: 5px solid var(--primary);">
+        <h2>🔑 Configuration de la Synchronisation Automatique GitHub</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Renseignez vos identifiants GitHub pour que chaque enregistrement de fiche mette automatiquement à jour le fichier <code>data.json</code> sur votre dépôt.
+        </p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Propriétaire / Orga GitHub</label>
+            <input type="text" id="gh_owner" placeholder="ex: mon-organisation">
+          </div>
+          <div class="form-group">
+            <label>Nom du Dépôt (Repository)</label>
+            <input type="text" id="gh_repo" placeholder="ex: reecriture-web">
+          </div>
+          <div class="form-group">
+            <label>Jeton d'accès personnel (Personal Access Token)</label>
+            <input type="password" id="gh_token" placeholder="ghp_xxxxxxxxxxxxxxxxx">
+          </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 10px;">
+          <button class="btn btn-primary" onclick="saveGitHubCredentials()">💾 Enregistrer les identifiants GitHub</button>
+        </div>
+      </div>
+
       <div class="controls">
         <h2>⚙️ Configuration des listes déroulantes & couleurs</h2>
         <div style="display:flex; gap:8px;">
@@ -326,7 +350,7 @@
         </div>
         <div style="margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
           <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
-          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveModal">Enregistrer & Synchroniser</button>
         </div>
       </form>
     </div>
@@ -353,15 +377,15 @@
 
     let boConfig = JSON.parse(localStorage.getItem('rewrite_bo_config')) || defaultConfig;
     let items = JSON.parse(localStorage.getItem('rewrite_items_data')) || [];
+    let ghConfig = JSON.parse(localStorage.getItem('rewrite_gh_config')) || { owner: '', repo: '', token: '' };
+    
     let showUrgencesOnly = false;
     let currentSort = { col: 'id', dir: 'asc' };
 
-    // Helper: Verify completed status (OK Contribution or Publié)
     function isCompletedStatus(statut) {
       return statut === 'OK Contribution' || statut === 'Publié' || statut === 'Validé';
     }
 
-    // Auto-calculate +15 days on date_envoi change
     function autoCalculateDueDate(envoiStr) {
       if (!envoiStr) return;
       const dateEnvoi = new Date(envoiStr);
@@ -377,8 +401,75 @@
       boConfig.statut = boConfig.statut.map(s => typeof s === 'string' ? { name: s, color: '#e2e8f0' } : s);
       saveBOConfig();
 
+      // Remplir les champs GitHub du Back-Office
+      document.getElementById('gh_owner').value = ghConfig.owner || '';
+      document.getElementById('gh_repo').value = ghConfig.repo || '';
+      document.getElementById('gh_token').value = ghConfig.token || '';
+
       await loadServerData(false);
       setupDragAndDrop();
+    }
+
+    function saveGitHubCredentials() {
+      ghConfig = {
+        owner: document.getElementById('gh_owner').value.trim(),
+        repo: document.getElementById('gh_repo').value.trim(),
+        token: document.getElementById('gh_token').value.trim()
+      };
+      localStorage.setItem('rewrite_gh_config', JSON.stringify(ghConfig));
+      alert("Identifiants GitHub enregistrés !");
+    }
+
+    async function saveToGitHub(dataToSave) {
+      if (!ghConfig.owner || !ghConfig.repo || !ghConfig.token) {
+        console.log("GitHub API non configurée. Enregistrement uniquement en local.");
+        return;
+      }
+
+      const filePath = "data.json";
+      const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${filePath}`;
+
+      try {
+        // 1. Obtenir le SHA du fichier data.json s'il existe déjà
+        let sha = "";
+        const getResp = await fetch(url, {
+          headers: { "Authorization": `token ${ghConfig.token}` }
+        });
+        if (getResp.ok) {
+          const fileInfo = await getResp.json();
+          sha = fileInfo.sha;
+        }
+
+        // 2. Encodage du contenu JSON en Base64 UTF-8
+        const jsonStr = JSON.stringify(dataToSave, null, 2);
+        const base64Content = btoa(unescape(encodeURIComponent(jsonStr)));
+
+        // 3. Requete PUT d'enregistrement
+        const putBody = {
+          message: "Mise à jour automatique des contenus (data.json)",
+          content: base64Content
+        };
+        if (sha) putBody.sha = sha;
+
+        const putResp = await fetch(url, {
+          method: "PUT",
+          headers: {
+            "Authorization": `token ${ghConfig.token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(putBody)
+        });
+
+        if (putResp.ok) {
+          console.log("✅ Synchronisation automatique data.json réussie sur GitHub.");
+        } else {
+          const errData = await putResp.json();
+          console.error("Erreur GitHub API:", errData);
+          alert("Sauvegarde locale OK, mais l'enregistrement distant GitHub a échoué : " + (errData.message || ''));
+        }
+      } catch (err) {
+        console.error("Erreur de connexion GitHub API:", err);
+      }
     }
 
     async function loadServerData(userTriggered = true) {
@@ -722,12 +813,13 @@
       }
     }
 
-    function updateQuickStatus(id, newStatut) {
+    async function updateQuickStatus(id, newStatut) {
       const item = items.find(i => String(i.id) === String(id));
       if (item) {
         item.statut = newStatut;
         saveItemsData();
         renderApp();
+        await saveToGitHub(items);
       }
     }
 
@@ -736,7 +828,6 @@
       document.getElementById('editId').value = "";
       document.getElementById('itemForm').reset();
       
-      // Default today date for date_envoi and calculate +15d
       const todayStr = new Date().toISOString().split('T')[0];
       document.getElementById('field_date_envoi').value = todayStr;
       autoCalculateDueDate(todayStr);
@@ -772,7 +863,7 @@
       document.getElementById('contentModal').style.display = 'none';
     }
 
-    function saveItem(e) {
+    async function saveItem(e) {
       e.preventDefault();
       const editId = document.getElementById('editId').value;
       const thematiqueVal = document.getElementById('field_thematique').value;
@@ -810,13 +901,17 @@
       populateDropdowns();
       closeModal();
       renderApp();
+
+      // Push distant sur GitHub API
+      await saveToGitHub(items);
     }
 
-    function deleteItem(id) {
+    async function deleteItem(id) {
       if (confirm("Supprimer ce contenu ?")) {
         items = items.filter(i => String(i.id) !== String(id));
         saveItemsData();
         renderApp();
+        await saveToGitHub(items);
       }
     }
 
@@ -978,7 +1073,7 @@
       reader.readAsText(file);
     }
 
-    function processTextImport(replace) {
+    async function processTextImport(replace) {
       try {
         const raw = document.getElementById('jsonPaste').value.trim();
         const parsed = JSON.parse(raw);
@@ -1015,6 +1110,8 @@
         populateDropdowns();
         alert(`${sanitized.length} éléments importés avec succès !`);
         switchTab('dashboard');
+
+        await saveToGitHub(items);
       } catch (err) {
         alert("Erreur lors de l'import JSON: " + err.message);
       }
