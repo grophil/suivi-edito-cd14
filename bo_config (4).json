@@ -1,0 +1,133 @@
+{
+  "statut": [
+    {
+      "name": "non commencé",
+      "color": "#ff0000"
+    },
+    {
+      "name": "Envoyé service",
+      "color": "#e891a2"
+    },
+    {
+      "name": "OK service",
+      "color": "#e2e8f0"
+    },
+    {
+      "name": "Réécriture",
+      "color": "#fef08a"
+    },
+    {
+      "name": "Relecture interne",
+      "color": "#fed7aa"
+    },
+    {
+      "name": "Relecture service",
+      "color": "#fbcfe8"
+    },
+    {
+      "name": "OK Contribution",
+      "color": "#bbf7d0"
+    },
+    {
+      "name": "Publié",
+      "color": "#86efac"
+    }
+  ],
+  "dga": [
+    "DGA-S",
+    "DGA-AE",
+    "DGA-ECAT",
+    "DGA-FM",
+    "DGA-RHT",
+    "Cabinet",
+    "DGS"
+  ],
+  "service": [
+    "Direction des Services Numériques",
+    "Direction de la Communication",
+    "DRH",
+    "Service habitat logement",
+    "Service arts et territoires",
+    "Bibliothèque du Calvados",
+    "Service patrimoine",
+    "Service insertion",
+    "Direction des archives",
+    "Service accompagnement des agences routières",
+    "Musée Vieux-la-Romaine",
+    "Cabinet du Président",
+    "Direction des finances",
+    "DGA Ressources Humaines",
+    "Direction des assemblées et juridique",
+    "Direction Générale des Services",
+    "Direction déléguée aux territoires d’action sociale",
+    "Direction de l’enfance et de la famille",
+    "Direction de l’autonomie",
+    "Maison départementale des personnes handicapées (MDPH)",
+    "Direction de l’Insertion et des territoires d’action sociale",
+    "Direction de la culture",
+    "Direction éducation, jeunesse, sport",
+    "Direction déléguée aux collèges",
+    "Direction du développement territorial et des fonds européens",
+    "Direction des routes",
+    "Direction des services numériques",
+    "Direction de l’eau,du littoral et de la mer",
+    "Direction environnement et ressources naturelles",
+    "DGA aménagement et environnement",
+    "MDPH",
+    "Autonomie",
+    "Insertion"
+  ],
+  "thematique": [
+    "Transports",
+    "Environnement",
+    "Action sociale",
+    "Culture",
+    "logement",
+    "Education et collèges",
+    "Aménagement et dévloppement du territoire",
+    "Sports et loisirs",
+    "Culture et patrimoine",
+    "Seniors et aidants",
+    "Enfance et famille",
+    "emploi et insertion professionnelle",
+    "Handicap",
+    "CSS",
+    "CSS / PMI",
+    "PMI",
+    "DEF",
+    "PMI /DEF",
+    "Aménagement et développement du territoire",
+    "Institution",
+    "Handicap/Autonomie",
+    "emploi et insertion professionnelle*",
+    "lecture publique"
+  ],
+  "typologie": [
+    "Fiche Aides",
+    "Page mission"
+  ],
+  "attribue_a": [
+    "Non attribué",
+    "Lucas D.",
+    "Elise F.",
+    "Elodie P.",
+    "Anne L.",
+    "Sylvain V."
+  ],
+  "relecture_1": [
+    "Non assigné",
+    "Lucas D.",
+    "Elise F.",
+    "Elodie P.",
+    "Anne L.",
+    "Sylvain V."
+  ],
+  "relecture_2": [
+    "Non assigné",
+    "Lucas D.",
+    "Elise F.",
+    "Elodie P.",
+    "Anne L.",
+    "Sylvain V."
+  ]
+}
