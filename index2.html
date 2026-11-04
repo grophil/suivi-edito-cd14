@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestionnaire de Réécriture de Contenus Web</title>
+  <style>
+    :root {
+      --primary: #0052cc;
+      --primary-hover: #0065ff;
+      --bg: #f4f5f7;
+      --card-bg: #ffffff;
+      --border: #dcdfe4;
+      --text: #172b4d;
+      --text-muted: #5e6c84;
+      --danger: #de350b;
+      --warning: #ffab00;
+      --success: #36b37e;
+    }
+
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); line-height: 1.4; }
+
+    /* Header & Navigation */
+    header { background: #0747a6; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    header h1 { margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+    nav { display: flex; gap: 10px; }
+    .nav-btn { background: rgba(255,255,255,0.15); color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .nav-btn:hover { background: rgba(255,255,255,0.25); }
+    .nav-btn.active { background: white; color: #0747a6; }
+
+    /* Layout Main */
+    main { padding: 25px 30px; max-width: 1600px; margin: 0 auto; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Cards & Containers */
+    .card { background: var(--card-bg); border-radius: 8px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card h2 { margin-top: 0; font-size: 1.1rem; border-bottom: 2px solid var(--bg); padding-bottom: 10px; color: #091e42; }
+    
+    /* Stats Bar */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .kpi-card { background: white; border-radius: 6px; padding: 12px 16px; border: 1px solid var(--border); border-left: 5px solid var(--primary); }
+    .kpi-val { font-size: 1.6rem; font-weight: 700; }
+    .kpi-lbl { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+
+    /* Progress Bars */
+    .progress-bar-bg { background: #ebecf0; border-radius: 12px; height: 12px; overflow: hidden; width: 100%; display: flex; }
+    .progress-bar-fill { background: var(--success); height: 100%; transition: width 0.3s ease; }
+    .progress-bar-primary { background: var(--primary); height: 100%; transition: width 0.3s ease; }
+
+    /* Controls Bar */
+    .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    
+    /* Forms & Inputs */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.8rem; font-weight: 600; color: #42526e; }
+    input, select, textarea { padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,82,204,0.2); }
+    
+    /* Buttons */
+    .btn { padding: 8px 14px; border-radius: 4px; border: none; font-weight: 600; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #ebecf0; color: #42526e; }
+    .btn-secondary:hover { background: #dfe1e6; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-warning { background: var(--warning); color: #172b4d; }
+    .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+
+    /* Table & Sort Headers */
+    .table-responsive { overflow-x: auto; background: white; border-radius: 8px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    th { background: #fafbfc; color: #5e6c84; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; user-select: none; }
+    th.sortable { cursor: pointer; transition: background 0.2s; }
+    th.sortable:hover { background: #ebecf0; color: var(--primary); }
+    tr:hover { background-color: #f4f5f7; }
+
+    /* Custom Badges & Selects */
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-block; text-align: center; }
+    .status-select { font-weight: 700; border: none; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 0.8rem; }
+    .badge-prio-Haute { background: #ffebe6; color: #de350b; }
+    .badge-prio-Moyenne { background: #fffae6; color: #ff8b00; }
+    .badge-prio-Basse { background: #e3fcef; color: #006644; }
+
+    /* Due Date Alerts */
+    .date-ok { color: var(--text); }
+    .date-alert-j2 { background: #ffab00; color: #172b4d; padding: 2px 6px; border-radius: 4px; font-weight: 700; animation: pulse 2s infinite; }
+    .date-alert-overdue { background: #de350b; color: white; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+    /* JSON & Backoffice Styles */
+    .drop-zone { border: 2px dashed var(--border); border-radius: 6px; padding: 20px; text-align: center; background: #fafbfc; cursor: pointer; }
+    .drop-zone:hover { border-color: var(--primary); background: #f4f5f7; }
+    .bo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+    .bo-item-list { list-style: none; padding: 0; margin: 10px 0 0 0; max-height: 250px; overflow-y: auto; }
+    .bo-item-list li { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: #fafbfc; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; gap: 8px; }
+    
+    /* Icon comments */
+    .comment-icon { cursor: pointer; margin-left: 4px; font-size: 0.9rem; }
+
+    /* Stats Layout */
+    .stats-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>📝 Suivi & Gestion des Réécritures Web</h1>
+    <nav>
+      <button class="nav-btn active" onclick="switchTab('dashboard')">📊 Tableau de Bord</button>
+      <button class="nav-btn" onclick="switchTab('stats')">📈 Statistiques & Charge</button>
+      <button class="nav-btn" onclick="switchTab('import')">📥 Import JSON</button>
+      <button class="nav-btn" onclick="switchTab('backoffice')">⚙️ Back-Office</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- TAB 1: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content active">
+      <!-- KPIs -->
+      <div class="kpi-grid" id="kpiContainer"></div>
+
+      <!-- Controls & Filters -->
+      <div class="controls">
+        <div class="filters">
+          <input type="text" id="filterSearch" placeholder="🔍 Rechercher..." oninput="renderApp()" style="min-width: 180px;">
+          <select id="filterDga" onchange="renderApp()"><option value="">Toutes les DGA</option></select>
+          <select id="filterStatut" onchange="renderApp()"><option value="">Tous les statuts</option></select>
+          <select id="filterTypologie" onchange="renderApp()"><option value="">Toutes les typologies</option></select>
+          <select id="filterPrio" onchange="renderApp()">
+            <option value="">Toutes les priorités</option>
+            <option value="Haute">Haute</option>
+            <option value="Moyenne">Moyenne</option>
+            <option value="Basse">Basse</option>
+          </select>
+          <button class="btn btn-warning" id="btnUrgences" onclick="toggleUrgences()">⚠️ Urgences (J-2 / Retards)</button>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="loadServerData(true)" title="Recharger les données et la configuration depuis le serveur">🔄 Recharger serveur</button>
+          <button class="btn btn-primary" onclick="openAddModal()">➕ Nouveau contenu</button>
+          <button class="btn btn-secondary" onclick="exportCSV()">📊 Export CSV</button>
+          <button class="btn btn-secondary" onclick="exportJSON()">💾 Export JSON</button>
+        </div>
+      </div>
+
+      <!-- Main Data Table -->
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" onclick="setSort('id')">ID <span id="sort_id"></span></th>
+              <th class="sortable" onclick="setSort('titre')">Titre <span id="sort_titre"></span></th>
+              <th>Typologie</th>
+              <th>Thématique</th>
+              <th class="sortable" onclick="setSort('dga')">DGA / Service <span id="sort_dga"></span></th>
+              <th>Attribué à</th>
+              <th>Relecteurs</th>
+              <th>Date envoi</th>
+              <th class="sortable" onclick="setSort('date_butoire')">Date butoire <span id="sort_date_butoire"></span></th>
+              <th class="sortable" onclick="setSort('priorite')">Priorité <span id="sort_priorite"></span></th>
+              <th class="sortable" onclick="setSort('statut')">Statut <span id="sort_statut"></span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: STATISTIQUES & CHARGE -->
+    <div id="tab-stats" class="tab-content">
+      <div class="card">
+        <h2>🚀 Taux de réalisation global du chantier</h2>
+        <div style="display: flex; align-items: center; gap: 20px; margin-top: 15px;">
+          <div style="font-size: 2.2rem; font-weight: 800; color: var(--primary);" id="globalRateVal">0%</div>
+          <div style="flex: 1;">
+            <div class="progress-bar-bg" style="height: 20px; border-radius: 10px;">
+              <div class="progress-bar-fill" id="globalProgressBar" style="width: 0%;"></div>
+            </div>
+            <small style="color: var(--text-muted); display: block; margin-top: 6px;" id="globalProgressSub">0 sur 0 contenus (OK Contribution ou Publiés)</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="card">
+          <h2>👥 Répartition de la charge & Avancement par rédacteur</h2>
+          <div class="table-responsive" style="border: none;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rédacteur</th>
+                  <th>Total assigné</th>
+                  <th>En cours</th>
+                  <th>Terminés</th>
+                  <th>Retards / J-2</th>
+                  <th>Taux de réalisation</th>
+                </tr>
+              </thead>
+              <tbody id="writerStatsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>📊 Répartition du volume de travail</h2>
+          <div id="workloadBarsContainer" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: IMPORT JSON -->
+    <div id="tab-import" class="tab-content">
+      <div class="card">
+        <h2>📥 Importation massive de contenus (JSON)</h2>
+        <p>Glissez-déposez un fichier `.json` ou collez directement la structure JSON ci-dessous.</p>
+        
+        <div class="drop-zone" onclick="document.getElementById('fileInput').click()" id="dropZone">
+          📄 Cliquez ou glissez votre fichier JSON ici
+          <input type="file" id="fileInput" accept=".json" style="display:none;" onchange="handleFileImport(event)">
+        </div>
+
+        <div style="margin-top: 15px;">
+          <label for="jsonPaste">Ou collez le JSON brut :</label>
+          <textarea id="jsonPaste" rows="8" placeholder='[{"titre": "Exemple", "statut": "À traiter", ...}]'></textarea>
+        </div>
+
+        <div style="margin-top: 15px; display: flex; gap: 10px;">
+          <button class="btn btn-primary" onclick="processTextImport(false)">➕ Ajouter aux données existantes</button>
+          <button class="btn btn-danger" onclick="processTextImport(true)">⚠️ Remplacer toute la base</button>
+          <button class="btn btn-secondary" onclick="copySampleJSON()">📋 Copier un modèle JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: BACK-OFFICE -->
+    <div id="tab-backoffice" class="tab-content">
+      <div class="controls">
+        <h2>⚙️ Configuration des listes déroulantes & couleurs</h2>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" onclick="document.getElementById('boConfigFile').click()">📥 Importer Config</button>
+          <input type="file" id="boConfigFile" accept=".json" style="display:none;" onchange="importBOConfig(event)">
+          <button class="btn btn-secondary" onclick="exportBOConfig()">💾 Exporter Config</button>
+          <button class="btn btn-danger" onclick="resetBOConfig()">🔄 Réinitialiser par défaut</button>
+        </div>
+      </div>
+      <div class="bo-grid" id="boContainer"></div>
+    </div>
+  </main>
+
+  <!-- MODAL: ADD / EDIT CONTENT -->
+  <div id="contentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div class="card" style="width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto;">
+      <h2 id="modalTitle">Ajouter un contenu</h2>
+      <form id="itemForm" onsubmit="saveItem(event)">
+        <input type="hidden" id="editId">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Titre de la page / contenu *</label>
+            <input type="text" id="field_titre" required>
+          </div>
+          <div class="form-group">
+            <label>Typologie</label>
+            <select id="field_typologie"></select>
+          </div>
+          <div class="form-group">
+            <label>Thématique (champ libre auto-apprenant)</label>
+            <input type="text" id="field_thematique" list="dl_thematique" placeholder="Saisir ou choisir...">
+            <datalist id="dl_thematique"></datalist>
+          </div>
+          <div class="form-group">
+            <label>DGA</label>
+            <select id="field_dga"></select>
+          </div>
+          <div class="form-group">
+            <label>Service (champ libre auto-apprenant)</label>
+            <input type="text" id="field_service" list="dl_service" placeholder="Saisir ou choisir...">
+            <datalist id="dl_service"></datalist>
+          </div>
+          <div class="form-group">
+            <label>Attribué à (Rédacteur)</label>
+            <select id="field_attribue_a"></select>
+          </div>
+          <div class="form-group">
+            <label>Relecture 1</label>
+            <select id="field_relecture_1"></select>
+          </div>
+          <div class="form-group">
+            <label>Relecture 2</label>
+            <select id="field_relecture_2"></select>
+          </div>
+          <div class="form-group">
+            <label>Priorité</label>
+            <select id="field_priorite">
+              <option value="Basse">Basse</option>
+              <option value="Moyenne" selected>Moyenne</option>
+              <option value="Haute">Haute</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Statut</label>
+            <select id="field_statut"></select>
+          </div>
+          <div class="form-group">
+            <label>Date d'envoi</label>
+            <input type="date" id="field_date_envoi" onchange="autoCalculateDueDate(this.value)">
+          </div>
+          <div class="form-group">
+            <label>Date butoire (auto J+15)</label>
+            <input type="date" id="field_date_butoire">
+          </div>
+          <div class="form-group">
+            <label>Contact référent</label>
+            <input type="text" id="field_contact">
+          </div>
+          <div class="form-group full">
+            <label>Commentaires / Consignes</label>
+            <textarea id="field_commentaires" rows="3"></textarea>
+          </div>
+        </div>
+        <div style="margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const defaultConfig = {
+      statut: [
+        { name: "À traiter", color: "#e2e8f0" },
+        { name: "En réécriture", color: "#fef08a" },
+        { name: "Relecture 1", color: "#fed7aa" },
+        { name: "Relecture 2", color: "#fbcfe8" },
+        { name: "OK Contribution", color: "#bbf7d0" },
+        { name: "Publié", color: "#86efac" }
+      ],
+      dga: ["DGA-S", "DGA-AE", "DGA-ECAT", "DGA-FM", "DGA-RHT", "Cabinet"],
+      service: ["Direction des Services Numériques", "Direction de la Communication", "DRH"],
+      thematique: ["Transports", "Environnement", "Action sociale", "Culture"],
+      typologie: ["Page d'information", "Démarche / Procédure", "Actualité", "Fiche service"],
+      attribue_a: ["Non attribué", "Lucas D.", "Elise F.", "Elodie P.", "Anne L.", "Sylvain V."],
+      relecture_1: ["Non assigné", "Lucas D.", "Elise F.", "Elodie P.", "Anne L.", "Sylvain V."],
+      relecture_2: ["Non assigné", "Lucas D.", "Elise F.", "Elodie P.", "Anne L.", "Sylvain V."]
+    };
+
+    let boConfig = JSON.parse(localStorage.getItem('rewrite_bo_config')) || defaultConfig;
+    let items = JSON.parse(localStorage.getItem('rewrite_items_data')) || [];
+    let showUrgencesOnly = false;
+    let currentSort = { col: 'id', dir: 'asc' };
+
+    // Helper: Verify completed status (OK Contribution or Publié)
+    function isCompletedStatus(statut) {
+      return statut === 'OK Contribution' || statut === 'Publié' || statut === 'Validé';
+    }
+
+    // Auto-calculate +15 days on date_envoi change
+    function autoCalculateDueDate(envoiStr) {
+      if (!envoiStr) return;
+      const dateEnvoi = new Date(envoiStr);
+      if (!isNaN(dateEnvoi.getTime())) {
+        dateEnvoi.setDate(dateEnvoi.getDate() + 15);
+        document.getElementById('field_date_butoire').value = dateEnvoi.toISOString().split('T')[0];
+      }
+    }
+
+    async function init() {
+      if (!boConfig.thematique) boConfig.thematique = defaultConfig.thematique;
+      if (!boConfig.service) boConfig.service = defaultConfig.service;
+      boConfig.statut = boConfig.statut.map(s => typeof s === 'string' ? { name: s, color: '#e2e8f0' } : s);
+      saveBOConfig();
+
+      await loadServerData(false);
+      setupDragAndDrop();
+    }
+
+    async function loadServerData(userTriggered = true) {
+      let loadedConfig = false;
+      let loadedData = false;
+
+      try {
+        const configResp = await fetch('./bo_config.json?t=' + Date.now());
+        if (configResp.ok) {
+          const serverConfig = await configResp.json();
+          if (typeof serverConfig === 'object') {
+            boConfig = { ...defaultConfig, ...serverConfig };
+            saveBOConfig();
+            loadedConfig = true;
+          }
+        }
+      } catch (err) {
+        console.log("Lecture bo_config.json serveur échouée.");
+      }
+
+      try {
+        const dataResp = await fetch('./data.json?t=' + Date.now());
+        if (dataResp.ok) {
+          const serverData = await dataResp.json();
+          if (Array.isArray(serverData)) {
+            items = serverData.map((item, idx) => {
+              if (item.thematique) addFreeTextEntry('thematique', item.thematique, false);
+              if (item.service) addFreeTextEntry('service', item.service, false);
+
+              return {
+                id: item.id || (Date.now() + idx).toString().slice(-5),
+                titre: item.titre || "Sans titre",
+                thematique: item.thematique || "",
+                typologie: item.typologie || boConfig.typologie[0] || "",
+                dga: item.dga || "",
+                service: item.service || "",
+                attribue_a: item.attribue_a || "",
+                relecture_1: item.relecture_1 || "",
+                relecture_2: item.relecture_2 || "",
+                priorite: item.priorite || "Moyenne",
+                statut: item.statut || boConfig.statut[0].name,
+                date_envoi: item.date_envoi || "",
+                date_butoire: item.date_butoire || "",
+                contact: item.contact || "",
+                commentaires: item.commentaires || ""
+              };
+            });
+            saveItemsData();
+            loadedData = true;
+          }
+        }
+      } catch (err) {
+        console.log("Lecture data.json serveur échouée.");
+      }
+
+      saveBOConfig();
+      populateDropdowns();
+      renderApp();
+
+      if (userTriggered) {
+        if (loadedData || loadedConfig) {
+          alert("Synchronisation réussie avec le serveur !");
+        } else {
+          alert("Impossible de joindre les fichiers distants. Utilisation des données locales.");
+        }
+      }
+    }
+
+    function saveBOConfig() {
+      localStorage.setItem('rewrite_bo_config', JSON.stringify(boConfig));
+    }
+
+    function saveItemsData() {
+      localStorage.setItem('rewrite_items_data', JSON.stringify(items));
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.add('active');
+      event.target.classList.add('active');
+
+      if (tabId === 'backoffice') renderBackOffice();
+      if (tabId === 'dashboard') renderApp();
+      if (tabId === 'stats') renderStats();
+    }
+
+    function setSort(col) {
+      if (currentSort.col === col) {
+        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSort.col = col;
+        currentSort.dir = 'asc';
+      }
+      renderApp();
+    }
+
+    function updateSortIcons() {
+      ['id', 'titre', 'dga', 'date_butoire', 'priorite', 'statut'].forEach(col => {
+        const el = document.getElementById('sort_' + col);
+        if (el) {
+          if (currentSort.col === col) {
+            el.innerText = currentSort.dir === 'asc' ? '▲' : '▼';
+          } else {
+            el.innerText = '';
+          }
+        }
+      });
+    }
+
+    function renderApp() {
+      renderKPIs();
+      updateSortIcons();
+
+      const search = document.getElementById('filterSearch').value.toLowerCase();
+      const fDga = document.getElementById('filterDga').value;
+      const fStatut = document.getElementById('filterStatut').value;
+      const fTypo = document.getElementById('filterTypologie').value;
+      const fPrio = document.getElementById('filterPrio').value;
+
+      let filtered = items.filter(item => {
+        const mSearch = !search || item.titre.toLowerCase().includes(search) || String(item.id).toLowerCase().includes(search) || (item.contact && item.contact.toLowerCase().includes(search));
+        const mDga = !fDga || item.dga === fDga;
+        const mStatut = !fStatut || item.statut === fStatut;
+        const mTypo = !fTypo || item.typologie === fTypo;
+        const mPrio = !fPrio || item.priorite === fPrio;
+        const mUrgence = !showUrgencesOnly || isUrgent(item.date_butoire, item.statut);
+        return mSearch && mDga && mStatut && mTypo && mPrio && mUrgence;
+      });
+
+      filtered.sort((a, b) => {
+        let valA = a[currentSort.col] || '';
+        let valB = b[currentSort.col] || '';
+
+        if (currentSort.col === 'priorite') {
+          const prioOrder = { 'Haute': 3, 'Moyenne': 2, 'Basse': 1, '': 0 };
+          valA = prioOrder[valA] || 0;
+          valB = prioOrder[valB] || 0;
+        } else {
+          valA = String(valA).toLowerCase();
+          valB = String(valB).toLowerCase();
+        }
+
+        if (valA < valB) return currentSort.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return currentSort.dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      filtered.forEach((item) => {
+        const tr = document.createElement('tr');
+        const stObj = boConfig.statut.find(s => s.name === item.statut) || { color: '#e2e8f0' };
+        const textColor = getContrastYIQ(stObj.color);
+        const hasComment = item.commentaires && item.commentaires.trim().length > 0;
+
+        tr.innerHTML = `
+          <td><strong>#${item.id}</strong></td>
+          <td>
+            <strong>${escapeHtml(item.titre)}</strong>
+            ${hasComment ? `<span class="comment-icon" title="${escapeHtml(item.commentaires)}">💬</span>` : ''}
+            ${item.contact ? `<br><small style="color:var(--text-muted)">Ref: ${escapeHtml(item.contact)}</small>` : ''}
+          </td>
+          <td><span class="badge" style="background:#f0f0f0; border:1px solid #ccc;">${escapeHtml(item.typologie || '-')}</span></td>
+          <td>${escapeHtml(item.thematique || '-')}</td>
+          <td><small>${escapeHtml(item.dga || '-')}</small><br><small style="color:var(--text-muted)">${escapeHtml(item.service || '-')}</small></td>
+          <td>${escapeHtml(item.attribue_a || '-')}</td>
+          <td><small>R1: ${escapeHtml(item.relecture_1 || '-')}</small><br><small>R2: ${escapeHtml(item.relecture_2 || '-')}</small></td>
+          <td><small>${item.date_envoi || '-'}</small></td>
+          <td>${formatDueDate(item.date_butoire, item.statut)}</td>
+          <td><span class="badge badge-prio-${item.priorite}">${item.priorite}</span></td>
+          <td>
+            <select class="status-select" style="background-color: ${stObj.color}; color: ${textColor};" onchange="updateQuickStatus('${item.id}', this.value)">
+              ${boConfig.statut.map(s => `<option value="${escapeHtml(s.name)}" ${s.name === item.statut ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
+            </select>
+          </td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="openEditModal('${item.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteItem('${item.id}')">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderStats() {
+      const totalItems = items.length;
+      const completedItems = items.filter(i => isCompletedStatus(i.statut)).length;
+      const globalPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+      document.getElementById('globalRateVal').innerText = globalPercent + '%';
+      document.getElementById('globalProgressBar').style.width = globalPercent + '%';
+      document.getElementById('globalProgressSub').innerText = `${completedItems} sur ${totalItems} contenus validés ("OK Contribution" ou "Publié")`;
+
+      const writers = boConfig.attribue_a.filter(w => w !== 'Non attribué');
+      const tbody = document.getElementById('writerStatsBody');
+      const workloadContainer = document.getElementById('workloadBarsContainer');
+      
+      tbody.innerHTML = '';
+      workloadContainer.innerHTML = '';
+
+      writers.forEach(writer => {
+        const writerItems = items.filter(i => i.attribue_a === writer);
+        const wTotal = writerItems.length;
+        const wDone = writerItems.filter(i => isCompletedStatus(i.statut)).length;
+        const wPending = wTotal - wDone;
+        const wUrgents = writerItems.filter(i => isUrgent(i.date_butoire, i.statut)).length;
+        const wPct = wTotal > 0 ? Math.round((wDone / wTotal) * 100) : 0;
+        const sharePct = totalItems > 0 ? Math.round((wTotal / totalItems) * 100) : 0;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(writer)}</strong></td>
+          <td><strong>${wTotal}</strong></td>
+          <td>${wPending}</td>
+          <td><span style="color:var(--success); font-weight:700;">${wDone}</span></td>
+          <td>${wUrgents > 0 ? `<span class="badge" style="background:#ffebe6; color:#de350b;">⚠️ ${wUrgents}</span>` : '-'}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="progress-bar-bg" style="flex:1;">
+                <div class="progress-bar-fill" style="width: ${wPct}%;"></div>
+              </div>
+              <small style="font-weight:700;">${wPct}%</small>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        const barItem = document.createElement('div');
+        barItem.innerHTML = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;">
+            <span><strong>${escapeHtml(writer)}</strong> (${wTotal} dossiers assignés)</span>
+            <span style="color:var(--text-muted);">${sharePct}% du chantier total</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-primary" style="width: ${sharePct}%;"></div>
+          </div>
+        `;
+        workloadContainer.appendChild(barItem);
+      });
+    }
+
+    function isUrgent(dateStr, statut) {
+      if (!dateStr || isCompletedStatus(statut)) return false;
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const due = new Date(dateStr);
+      due.setHours(0,0,0,0);
+      const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+      return diffDays <= 2;
+    }
+
+    function formatDueDate(dateStr, statut) {
+      if (!dateStr) return '-';
+      if (isCompletedStatus(statut)) return `<span class="date-ok">${dateStr}</span>`;
+      
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const due = new Date(dateStr);
+      due.setHours(0,0,0,0);
+      const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        return `<span class="date-alert-overdue">🚨 Retard (${dateStr})</span>`;
+      } else if (diffDays <= 2) {
+        return `<span class="date-alert-j2">⚠️ J-${diffDays} (${dateStr})</span>`;
+      }
+      return `<span class="date-ok">${dateStr}</span>`;
+    }
+
+    function toggleUrgences() {
+      showUrgencesOnly = !showUrgencesOnly;
+      const btn = document.getElementById('btnUrgences');
+      btn.style.outline = showUrgencesOnly ? '3px solid red' : 'none';
+      renderApp();
+    }
+
+    function renderKPIs() {
+      const container = document.getElementById('kpiContainer');
+      container.innerHTML = '';
+      
+      boConfig.statut.forEach(st => {
+        const count = items.filter(i => i.statut === st.name).length;
+        const card = document.createElement('div');
+        card.className = 'kpi-card';
+        card.style.borderLeftColor = st.color;
+        card.innerHTML = `<div class="kpi-val">${count}</div><div class="kpi-lbl">${escapeHtml(st.name)}</div>`;
+        container.appendChild(card);
+      });
+    }
+
+    function populateDropdowns() {
+      populateSelect('filterDga', boConfig.dga, 'Toutes les DGA');
+      populateSelect('filterStatut', boConfig.statut.map(s => s.name), 'Tous les statuts');
+      populateSelect('filterTypologie', boConfig.typologie, 'Toutes les typologies');
+      
+      populateSelect('field_statut', boConfig.statut.map(s => s.name));
+      populateSelect('field_typologie', boConfig.typologie);
+      populateSelect('field_dga', boConfig.dga);
+      populateSelect('field_attribue_a', boConfig.attribue_a);
+      populateSelect('field_relecture_1', boConfig.relecture_1);
+      populateSelect('field_relecture_2', boConfig.relecture_2);
+
+      populateDatalist('dl_thematique', boConfig.thematique);
+      populateDatalist('dl_service', boConfig.service);
+    }
+
+    function populateSelect(elemId, options, defaultText = null) {
+      const sel = document.getElementById(elemId);
+      if (!sel) return;
+      const currentVal = sel.value;
+      sel.innerHTML = '';
+      if (defaultText) {
+        sel.innerHTML += `<option value="">${defaultText}</option>`;
+      }
+      options.forEach(opt => {
+        sel.innerHTML += `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`;
+      });
+      if (currentVal && options.includes(currentVal)) {
+        sel.value = currentVal;
+      }
+    }
+
+    function populateDatalist(elemId, options) {
+      const dl = document.getElementById(elemId);
+      if (!dl) return;
+      dl.innerHTML = '';
+      options.forEach(opt => {
+        if (opt) dl.innerHTML += `<option value="${escapeHtml(opt)}">`;
+      });
+    }
+
+    function addFreeTextEntry(key, val, save = true) {
+      val = val.trim();
+      if (!val) return;
+      if (!boConfig[key]) boConfig[key] = [];
+      if (!boConfig[key].includes(val)) {
+        boConfig[key].push(val);
+        if (save) saveBOConfig();
+      }
+    }
+
+    function updateQuickStatus(id, newStatut) {
+      const item = items.find(i => String(i.id) === String(id));
+      if (item) {
+        item.statut = newStatut;
+        saveItemsData();
+        renderApp();
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('modalTitle').innerText = "Ajouter un contenu";
+      document.getElementById('editId').value = "";
+      document.getElementById('itemForm').reset();
+      
+      // Default today date for date_envoi and calculate +15d
+      const todayStr = new Date().toISOString().split('T')[0];
+      document.getElementById('field_date_envoi').value = todayStr;
+      autoCalculateDueDate(todayStr);
+
+      document.getElementById('contentModal').style.display = 'flex';
+    }
+
+    function openEditModal(id) {
+      const item = items.find(i => String(i.id) === String(id));
+      if (!item) return;
+
+      document.getElementById('modalTitle').innerText = "Modifier le contenu #" + item.id;
+      document.getElementById('editId').value = item.id;
+      document.getElementById('field_titre').value = item.titre || "";
+      document.getElementById('field_thematique').value = item.thematique || "";
+      document.getElementById('field_typologie').value = item.typologie || "";
+      document.getElementById('field_dga').value = item.dga || "";
+      document.getElementById('field_service').value = item.service || "";
+      document.getElementById('field_attribue_a').value = item.attribue_a || "";
+      document.getElementById('field_relecture_1').value = item.relecture_1 || "";
+      document.getElementById('field_relecture_2').value = item.relecture_2 || "";
+      document.getElementById('field_priorite').value = item.priorite || "Moyenne";
+      document.getElementById('field_statut').value = item.statut || "";
+      document.getElementById('field_date_envoi').value = item.date_envoi || "";
+      document.getElementById('field_date_butoire').value = item.date_butoire || "";
+      document.getElementById('field_contact').value = item.contact || "";
+      document.getElementById('field_commentaires').value = item.commentaires || "";
+
+      document.getElementById('contentModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('contentModal').style.display = 'none';
+    }
+
+    function saveItem(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editId').value;
+      const thematiqueVal = document.getElementById('field_thematique').value;
+      const serviceVal = document.getElementById('field_service').value;
+
+      addFreeTextEntry('thematique', thematiqueVal);
+      addFreeTextEntry('service', serviceVal);
+
+      const itemData = {
+        id: editId || Date.now().toString().slice(-5),
+        titre: document.getElementById('field_titre').value,
+        thematique: thematiqueVal,
+        typologie: document.getElementById('field_typologie').value,
+        dga: document.getElementById('field_dga').value,
+        service: serviceVal,
+        attribue_a: document.getElementById('field_attribue_a').value,
+        relecture_1: document.getElementById('field_relecture_1').value,
+        relecture_2: document.getElementById('field_relecture_2').value,
+        priorite: document.getElementById('field_priorite').value,
+        statut: document.getElementById('field_statut').value,
+        date_envoi: document.getElementById('field_date_envoi').value,
+        date_butoire: document.getElementById('field_date_butoire').value,
+        contact: document.getElementById('field_contact').value,
+        commentaires: document.getElementById('field_commentaires').value
+      };
+
+      if (editId) {
+        const idx = items.findIndex(i => String(i.id) === String(editId));
+        if (idx !== -1) items[idx] = itemData;
+      } else {
+        items.push(itemData);
+      }
+
+      saveItemsData();
+      populateDropdowns();
+      closeModal();
+      renderApp();
+    }
+
+    function deleteItem(id) {
+      if (confirm("Supprimer ce contenu ?")) {
+        items = items.filter(i => String(i.id) !== String(id));
+        saveItemsData();
+        renderApp();
+      }
+    }
+
+    function renderBackOffice() {
+      const container = document.getElementById('boContainer');
+      container.innerHTML = '';
+
+      const statutCard = document.createElement('div');
+      statutCard.className = 'card';
+      statutCard.innerHTML = `
+        <h2>Statuts & Couleurs</h2>
+        <div style="display:flex; gap:6px; margin-bottom:10px;">
+          <input type="text" id="add_bo_statut" placeholder="Nouveau statut...">
+          <button class="btn btn-primary" onclick="addBOItem('statut')">+</button>
+        </div>
+        <ul class="bo-item-list">
+          ${boConfig.statut.map((st, i) => `
+            <li>
+              <input type="color" value="${st.color}" oninput="updateBOColor(${i}, this.value)">
+              <span>${escapeHtml(st.name)}</span>
+              <div>
+                <button class="btn btn-secondary btn-sm" onclick="moveBO('statut', ${i}, -1)">⬆️</button>
+                <button class="btn btn-secondary btn-sm" onclick="moveBO('statut', ${i}, 1)">⬇️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteBO('statut', ${i})">❌</button>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      `;
+      container.appendChild(statutCard);
+
+      const keys = [
+        { key: 'thematique', title: 'Thématiques (enregistrées)' },
+        { key: 'service', title: 'Services (enregistrés)' },
+        { key: 'typologie', title: 'Typologies' },
+        { key: 'dga', title: 'DGAs' },
+        { key: 'attribue_a', title: 'Rédacteurs (Attribué à)' },
+        { key: 'relecture_1', title: 'Relecteurs 1' },
+        { key: 'relecture_2', title: 'Relecteurs 2' }
+      ];
+
+      keys.forEach(k => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h2>${k.title}</h2>
+          <div style="display:flex; gap:6px; margin-bottom:10px;">
+            <input type="text" id="add_bo_${k.key}" placeholder="Ajouter option...">
+            <button class="btn btn-primary" onclick="addBOItem('${k.key}')">+</button>
+          </div>
+          <ul class="bo-item-list">
+            ${(boConfig[k.key] || []).map((item, i) => `
+              <li>
+                <span>${escapeHtml(item)}</span>
+                <div>
+                  <button class="btn btn-secondary btn-sm" onclick="moveBO('${k.key}', ${i}, -1)">⬆️</button>
+                  <button class="btn btn-secondary btn-sm" onclick="moveBO('${k.key}', ${i}, 1)">⬇️</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteBO('${k.key}', ${i})">❌</button>
+                </div>
+              </li>
+            `).join('')}
+          </ul>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function addBOItem(key) {
+      const inp = document.getElementById('add_bo_' + key);
+      const val = inp.value.trim();
+      if (!val) return;
+
+      if (key === 'statut') {
+        boConfig.statut.push({ name: val, color: '#e2e8f0' });
+      } else {
+        if (!boConfig[key]) boConfig[key] = [];
+        boConfig[key].push(val);
+      }
+      saveBOConfig();
+      populateDropdowns();
+      inp.value = '';
+      renderBackOffice();
+    }
+
+    function updateBOColor(index, color) {
+      boConfig.statut[index].color = color;
+      saveBOConfig();
+    }
+
+    function deleteBO(key, index) {
+      boConfig[key].splice(index, 1);
+      saveBOConfig();
+      populateDropdowns();
+      renderBackOffice();
+    }
+
+    function moveBO(key, index, dir) {
+      const newIdx = index + dir;
+      if (newIdx < 0 || newIdx >= boConfig[key].length) return;
+      const temp = boConfig[key][index];
+      boConfig[key][index] = boConfig[key][newIdx];
+      boConfig[key][newIdx] = temp;
+      saveBOConfig();
+      populateDropdowns();
+      renderBackOffice();
+    }
+
+    function resetBOConfig() {
+      if (confirm("Réinitialiser les options par défaut ?")) {
+        boConfig = JSON.parse(JSON.stringify(defaultConfig));
+        saveBOConfig();
+        populateDropdowns();
+        renderBackOffice();
+      }
+    }
+
+    function exportBOConfig() {
+      downloadFile(JSON.stringify(boConfig, null, 2), 'bo_config.json', 'application/json');
+    }
+
+    function importBOConfig(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (typeof parsed !== 'object') throw new Error("Format JSON invalide.");
+          boConfig = { ...defaultConfig, ...parsed };
+          saveBOConfig();
+          populateDropdowns();
+          renderBackOffice();
+          alert("Configuration importée avec succès !");
+        } catch (err) {
+          alert("Erreur lors de l'import de la configuration: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function setupDragAndDrop() {
+      const zone = document.getElementById('dropZone');
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = 'var(--primary)'; });
+      zone.addEventListener('dragleave', () => { zone.style.borderColor = 'var(--border)'; });
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.style.borderColor = 'var(--border)';
+        if (e.dataTransfer.files.length) handleFileImport({ target: { files: e.dataTransfer.files } });
+      });
+    }
+
+    function handleFileImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        document.getElementById('jsonPaste').value = evt.target.result;
+      };
+      reader.readAsText(file);
+    }
+
+    function processTextImport(replace) {
+      try {
+        const raw = document.getElementById('jsonPaste').value.trim();
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error("Le JSON doit être un tableau d'objets [ {} ]");
+
+        const sanitized = parsed.map((item, idx) => {
+          if (item.thematique) addFreeTextEntry('thematique', item.thematique, false);
+          if (item.service) addFreeTextEntry('service', item.service, false);
+
+          return {
+            id: item.id || (Date.now() + idx).toString().slice(-5),
+            titre: item.titre || "Sans titre",
+            thematique: item.thematique || "",
+            typologie: item.typologie || boConfig.typologie[0] || "",
+            dga: item.dga || "",
+            service: item.service || "",
+            attribue_a: item.attribue_a || "",
+            relecture_1: item.relecture_1 || "",
+            relecture_2: item.relecture_2 || "",
+            priorite: item.priorite || "Moyenne",
+            statut: item.statut || boConfig.statut[0].name,
+            date_envoi: item.date_envoi || "",
+            date_butoire: item.date_butoire || "",
+            contact: item.contact || "",
+            commentaires: item.commentaires || ""
+          };
+        });
+
+        if (replace) items = sanitized;
+        else items = [...items, ...sanitized];
+
+        saveBOConfig();
+        saveItemsData();
+        populateDropdowns();
+        alert(`${sanitized.length} éléments importés avec succès !`);
+        switchTab('dashboard');
+      } catch (err) {
+        alert("Erreur lors de l'import JSON: " + err.message);
+      }
+    }
+
+    function copySampleJSON() {
+      const sample = [
+        {
+          id: "101",
+          titre: "Page Transport Scolaire",
+          thematique: "Transports",
+          typologie: "Démarche / Procédure",
+          dga: "DGA-AE",
+          service: "Direction des Services Numériques",
+          attribue_a: "Lucas D.",
+          relecture_1: "Elise F.",
+          relecture_2: "Anne L.",
+          priorite: "Haute",
+          statut: "En réécriture",
+          date_envoi: "2026-11-01",
+          date_butoire: "2026-11-16",
+          contact: "contact.transport@domaine.fr",
+          commentaires: "Clarifier les modalités RGAA."
+        }
+      ];
+      document.getElementById('jsonPaste').value = JSON.stringify(sample, null, 2);
+    }
+
+    function exportJSON() {
+      downloadFile(JSON.stringify(items, null, 2), 'data.json', 'application/json');
+    }
+
+    function exportCSV() {
+      if (!items.length) return alert("Aucune donnée à exporter.");
+      const headers = Object.keys(items[0]).join(",");
+      const rows = items.map(i => Object.values(i).map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+      const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
+      downloadFile(csvContent, 'contenus_web.csv', 'text/csv;charset=utf-8;');
+    }
+
+    function downloadFile(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function getContrastYIQ(hexcolor){
+      hexcolor = hexcolor.replace("#", "");
+      if(hexcolor.length === 3) hexcolor = hexcolor.split('').map(c => c + c).join('');
+      const r = parseInt(hexcolor.substr(0,2),16);
+      const g = parseInt(hexcolor.substr(2,2),16);
+      const b = parseInt(hexcolor.substr(4,2),16);
+      const yiq = ((r*299)+(g*587)+(b*114))/1000;
+      return (yiq >= 128) ? '#172b4d' : '#ffffff';
+    }
+
+    init();
+  </script>
+</body>
+</html>
